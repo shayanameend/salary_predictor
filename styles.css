@@ -1,0 +1,36 @@
+/* Prediction Results Styling */
+.salary-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1e88e5;
+  text-align: center;
+  margin-bottom: 0;
+}
+.salary-caption {
+  font-size: 1rem;
+  color: #666;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.market-position {
+  display: flex;
+  justify-content: space-between;
+  margin: 15px 0;
+  font-size: 0.9rem;
+}
+.position-indicator {
+  height: 8px;
+  background: linear-gradient(to right, #42a5f5, #4caf50, #ff9800);
+  border-radius: 4px;
+  margin: 5px 0;
+  position: relative;
+}
+.position-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #212121;
+  border-radius: 50%;
+  top: -2px;
+  transform: translateX(-50%);
+}
