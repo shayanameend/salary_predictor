@@ -11,7 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Load custom CSS
 def load_css():
     with open("styles.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -36,7 +35,6 @@ def load_models():
     model = joblib.load("output/salary_predictor.joblib")
     return preprocessor, model
 
-# Load data and models
 try:
     data = load_data()
     preprocessor, model = load_models()
@@ -44,9 +42,8 @@ except Exception as e:
     st.error(f"Error loading data or models: {e}")
     st.stop()
 
-# Define functions for predictions
 def predict_salary(country, education, experience, dev_type, company_size, remote_work):
-    # Create a dataframe with the input data
+
     input_data = pd.DataFrame({
         'Country': [country],
         'EducationLevel': [education],
@@ -57,28 +54,26 @@ def predict_salary(country, education, experience, dev_type, company_size, remot
         'RemoteWork': [remote_work]
     })
 
-    # Transform the input data
+
     input_processed = preprocessor.transform(input_data)
 
-    # Make prediction (log scale)
+
     log_prediction = model.predict(input_processed)[0]
 
-    # Convert from log scale to actual salary
+
     predicted_salary = np.expm1(log_prediction)
 
-    # Calculate confidence interval (simple approximation)
+
     lower_bound = predicted_salary * 0.8
     upper_bound = predicted_salary * 1.2
 
     return predicted_salary, lower_bound, upper_bound
 
-# Navigation
 def navigation():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to", ["Home", "Data Exploration", "Salary Prediction", "Model Insights"])
     return page
 
-# Pages
 def home_page():
     st.title("💰 Developer Salary Predictor")
     st.subheader("Welcome to the Developer Salary Prediction Dashboard")
@@ -122,7 +117,6 @@ def data_exploration_page():
     with tab1:
         st.subheader("Salary Distribution")
 
-        # Add a filter for year range
         min_salary = int(data['Salary'].min())
         max_salary = int(data['Salary'].max())
         salary_range = st.slider("Filter Salary Range", min_salary, max_salary, (min_salary, max_salary))
@@ -133,7 +127,6 @@ def data_exploration_page():
         fig.update_layout(xaxis_title="Salary (USD)", yaxis_title="Count")
         st.plotly_chart(fig, use_container_width=True)
 
-        # Log scale
         fig = px.histogram(filtered_data, x="LogSalary", nbins=50, title="Distribution of Log Salaries")
         fig.update_layout(xaxis_title="Log Salary", yaxis_title="Count")
         st.plotly_chart(fig, use_container_width=True)
@@ -141,17 +134,14 @@ def data_exploration_page():
     with tab2:
         st.subheader("Salary by Country")
 
-        # Filter to top countries by count
         min_country_count = st.slider("Minimum number of records per country", 10, 500, 100)
         country_counts = data['Country'].value_counts()
         top_countries = country_counts[country_counts > min_country_count].index.tolist()
         filtered_data = data[data['Country'].isin(top_countries)]
 
-        # Group by country
         country_data = filtered_data.groupby('Country')['Salary'].agg(['mean', 'median', 'count']).reset_index()
         country_data = country_data.sort_values('mean', ascending=False)
 
-        # Choose visualization type
         viz_type = st.radio("Visualization Type", ["Bar Chart", "Map"], horizontal=True)
 
         if viz_type == "Bar Chart":
@@ -161,7 +151,7 @@ def data_exploration_page():
                          hover_data=['median', 'count'])
             st.plotly_chart(fig, use_container_width=True)
         else:
-            # Create a world map visualization
+
             try:
                 fig = px.choropleth(country_data,
                                     locations='Country',
@@ -186,7 +176,6 @@ def data_exploration_page():
     with tab3:
         st.subheader("Salary by Experience")
 
-        # Experience vs Salary
         fig = px.scatter(data, x="YearsExperience", y="Salary",
                          title="Experience vs Salary",
                          labels={"YearsExperience": "Years of Experience", "Salary": "Salary (USD)"},
@@ -194,19 +183,9 @@ def data_exploration_page():
                          trendline="lowess")
         st.plotly_chart(fig, use_container_width=True)
 
-        # Add a box plot for experience ranges
-        exp_bins = [0, 3, 5, 10, 15, 20, 30, 50]
-        exp_labels = ['0-3', '3-5', '5-10', '10-15', '15-20', '20-30', '30+']
-        data['ExpRange'] = pd.cut(data['YearsExperience'], bins=exp_bins, labels=exp_labels)
-
-        fig = px.box(data, x="ExpRange", y="Salary",
-                     title="Salary Distribution by Experience Range",
-                     labels={"ExpRange": "Years of Experience", "Salary": "Salary (USD)"})
-        st.plotly_chart(fig, use_container_width=True)
-
     with tab4:
         st.subheader("Correlation Analysis")
-        
+
         numerical_cols = ['Salary', 'YearsExperience', 'LogSalary', 'ExpSquared']
         corr_data = data[numerical_cols].corr()
 
@@ -223,7 +202,6 @@ def data_exploration_page():
         - ExpSquared (experience squared) shows the non-linear relationship between experience and salary
         """)
 
-        # Add a scatter plot matrix
         st.subheader("Scatter Plot Matrix")
         try:
             fig = px.scatter_matrix(data,
@@ -237,23 +215,20 @@ def data_exploration_page():
 def salary_prediction_page():
     st.title("Salary Prediction")
     st.write("Use this tool to predict your potential salary based on your profile.")
-
-    # Create a container with a border for the form
     with st.container():
         st.subheader("Enter Your Information")
 
-        # Create a 2-column layout for the form
         col1, col2 = st.columns(2)
 
         with col1:
-            # Country selection with search
+
             countries = sorted(data['Country'].unique().tolist())
             top_countries = ['United States', 'Germany', 'United Kingdom', 'Canada', 'India', 'Australia']
-            # Filter to only show top countries first in the list
+
             country_options = [c for c in top_countries if c in countries] + [c for c in countries if c not in top_countries]
             country = st.selectbox("Country", country_options, index=0 if 'United States' in country_options else 0)
 
-            # Education level with descriptions
+
             education_map = {
                 "Bachelor's degree": "4-year degree (BS/BA)",
                 "Master's degree": "Graduate degree (MS/MA/MEng)",
@@ -275,12 +250,12 @@ def salary_prediction_page():
                                         format_func=lambda x: education_options[x])
             education = education_levels[education_idx]
 
-            # Years of experience with visual slider
+
             experience = st.slider("Years of Professional Experience", 0, 30, 5,
                                 help="Drag the slider to indicate your years of professional experience")
 
         with col2:
-            # Developer type with descriptions
+
             if 'DeveloperType' in data.columns:
                 dev_types = sorted(data['DeveloperType'].unique().tolist())
                 dev_type_descriptions = {
@@ -329,9 +304,9 @@ def salary_prediction_page():
             else:
                 company_size = "Unknown"
 
-            # Remote work with icons
+
             if 'RemoteWork' in data.columns:
-                # Get unique values
+    
                 remote_options = data['RemoteWork'].unique().tolist()
 
                 remote_options = sorted(remote_options)
@@ -342,25 +317,19 @@ def salary_prediction_page():
             else:
                 remote_work = "Unknown"
 
-        # Predict button centered
-        st.markdown("<br>", unsafe_allow_html=True)  # Add some space
+        st.markdown("<br>", unsafe_allow_html=True)
         predict_button = st.button("Predict My Salary", type="primary", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)  # Close the form container
-
-    # Results section (below the form)
+        st.markdown('</div>', unsafe_allow_html=True)
     if predict_button:
-        # Calculate prediction
         predicted_salary, _, _ = predict_salary(
             country, education, experience, dev_type, company_size, remote_work
         )
 
         st.subheader("Prediction Results")
 
-        # Calculate market position percentile (simplified approximation)
         overall_p75 = data['Salary'].quantile(0.75)
         overall_p25 = data['Salary'].quantile(0.25)
 
-        # Determine market position
         position_percent = min(100, max(0, (predicted_salary - overall_p25) / (overall_p75 - overall_p25) * 100))
         position_label = "Average"
         if position_percent < 33:
@@ -368,14 +337,11 @@ def salary_prediction_page():
         elif position_percent > 66:
             position_label = "Higher Range"
 
-        # Calculate marker position for visualization
         marker_position = position_percent
 
-        # Display prediction with large font
         st.markdown(f'<div class="salary-value">${predicted_salary:,.0f}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="salary-caption">Estimated annual salary in USD</div>', unsafe_allow_html=True)
 
-        # Display market position
         st.markdown(f'''
         <div class="market-position">
             <span>Lower Range</span>
@@ -395,8 +361,6 @@ def salary_prediction_page():
 
 def model_insights_page():
     st.title("Model Insights")
-
-    # Model architecture visualization
     st.header("Model Architecture")
 
     st.write("""
@@ -408,54 +372,60 @@ def model_insights_page():
 
     This ensemble approach provides more robust predictions than any single model.
     """)
-
-    # Performance metrics
     st.header("Performance Metrics")
-
+    model_data = pd.DataFrame({
+        'Model': ['XGBoost', 'Random Forest', 'Stacked Model'],
+        'RMSE (log scale)': [0.4091, 0.4350, 0.4091],
+        'R² Score': [0.6378, 0.5907, 0.6380],
+        'RMSE (USD)': [38979.91, 40146.40, 38953.96]
+    })
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("R² Score", "0.6386", "Good")
-        st.write("""
-        **R²** measures how well the model explains the variance in salaries.
-
-        A value of 0.6386 means the model explains about 64% of the variance, which is good for salary prediction.
-        """)
+        fig1 = px.bar(
+            model_data,
+            x='Model',
+            y='R² Score',
+            title="R² Score (higher is better)",
+            color='Model',
+            color_discrete_sequence=['#0d47a1', '#1565c0', '#1976d2'],
+            text_auto='.4f'
+        )
+        fig1.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
-        st.metric("RMSE", "$38,900.57", "-15% vs baseline")
-        st.write("""
-        **Root Mean Squared Error (RMSE)** measures the average prediction error.
-
-        On average, predictions are off by about $38,900, which is 15% better than a simple baseline model.
-        """)
+        fig2 = px.bar(
+            model_data,
+            x='Model',
+            y='RMSE (log scale)',
+            title="RMSE (log scale) (lower is better)",
+            color='Model',
+            color_discrete_sequence=['#0d47a1', '#1565c0', '#1976d2'],
+            text_auto='.4f'
+        )
+        fig2.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig2, use_container_width=True)
 
     with col3:
-        st.metric("Log RMSE", "0.4087", "-18% vs baseline")
-        st.write("""
-        **Log RMSE** is the Root Mean Squared Error on the logarithmic scale.
+        fig3 = px.bar(
+            model_data,
+            x='Model',
+            y='RMSE (USD)',
+            title="RMSE (USD) (lower is better)",
+            color='Model',
+            color_discrete_sequence=['#0d47a1', '#1565c0', '#1976d2'],
+            text_auto='$,.2f'
+        )
+        fig3.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig3, use_container_width=True)
 
-        This metric is useful because salaries follow a log-normal distribution rather than a normal distribution.
-        """)
-
-    # Cross-validation results
-    st.header("Cross-Validation Results")
-
-    cv_data = pd.DataFrame({
-        'Fold': [1, 2, 3, 4, 5],
-        'R²': [0.62, 0.65, 0.63, 0.66, 0.64],
-        'RMSE': [40200, 37800, 39500, 36900, 38900],
-        'Log RMSE': [0.42, 0.39, 0.41, 0.38, 0.40]
-    })
-
-    fig = px.line(cv_data, x='Fold', y=['R²', 'RMSE', 'Log RMSE'],
-                 title="Cross-Validation Performance",
-                 labels={'value': 'Metric Value', 'variable': 'Metric'},
-                 facet_col='variable', facet_col_wrap=3)
-    fig.update_layout(height=300)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Model limitations
+    st.write("""
+    **Observations:**
+    - The **Stacked Model** achieves the best overall performance with the highest R² score (0.6380) and lowest RMSE in USD ($38,953.96)
+    - **XGBoost** performs nearly as well as the Stacked Model
+    - **Random Forest** has slightly lower performance metrics compared to the other models
+    """)
     st.header("Model Limitations")
 
     st.info("""
@@ -472,7 +442,6 @@ def model_insights_page():
     5. **Industry-Specific Factors**: The model doesn't distinguish between industries, which can significantly impact salaries.
     """)
 
-# Main app
 def main():
     page = navigation()
 
